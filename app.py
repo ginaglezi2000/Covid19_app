@@ -27,12 +27,14 @@ def fetch_data():
 def create_geodataframe(usa_git,population, current):
     usa_mainland = usa_git.loc[:, ['STUSPS', 'NAME', 'geometry']]
     # Merging population data and Covid-19 data
-    cov_pop = population.merge(current.iloc[:, 1:3], left_on='STUSPS', right_on='state')
+    # cov_pop = population.merge(current.iloc[:, 1:3], left_on='STUSPS', right_on='state')
+    cov_pop = population.merge(current.loc[:, ['state','positive']], left_on='STUSPS', right_on='state')
     cov_pop.drop('state', axis=1, inplace=True)
     # Compute percentage of population already infected by Covid-19 by state
     cov_pop['positive_population_fraction'] = (cov_pop.positive / cov_pop.pop_2019) * 100
     # Adding percentage to shape file
-    usa_mainland_info = usa_mainland.merge(cov_pop.iloc[:, [0, 4]], on='STUSPS')
+    for_map = ['STUSPS', 'NAME', 'pop_2019', 'positive_population_fraction']
+    usa_mainland_info = usa_mainland.merge(cov_pop.loc[:,for_map], on='STUSPS')
     return usa_mainland_info
 
 
@@ -55,9 +57,9 @@ def some_stats(usa_mainland_info):
 
 
 def frontend(current,max_pair, min_pair):
-    st.title("Covid-19 tracker by state")
+    st.title("Covid-19 tracker")
     st.subheader("By Georgina Gonzalez-Isunza")
-    st.header("Percentage of population that has been infected per state")
+    st.header("Percentage of population that has been infected")
     st.text('Highest: {} with {:.1f}%      Lowest: {} with {:.1f}% '\
             .format(max_pair[0], max_pair[1], min_pair[0], min_pair[1]))
     last_date = str(current.date[0])
