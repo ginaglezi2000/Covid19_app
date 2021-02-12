@@ -33,7 +33,7 @@ def create_geodataframe(usa_git,population, current):
     # Compute percentage of population already infected by Covid-19 by state
     cov_pop['positive_population_fraction'] = (cov_pop.positive / cov_pop.pop_2019) * 100
     # Adding percentage to shape file
-    for_map = ['STUSPS', 'NAME', 'pop_2019', 'positive_population_fraction']
+    for_map = ['STUSPS', 'pop_2019', 'positive_population_fraction']
     usa_mainland_info = usa_mainland.merge(cov_pop.loc[:,for_map], on='STUSPS')
     return usa_mainland_info
 
