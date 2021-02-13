@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
 import numpy as np
+import seaborn as sns
 
 
 # The environment:
@@ -11,6 +12,9 @@ import numpy as np
 # pandas matplotlib notebook scikit-learn geopandas shapely descartes
 # xlrd openpyxl streamlit seaborn altair plotly
 # conda activate geo
+
+st.set_page_config(page_title='Gonzalez-Isunza.Covid19App',
+                   page_icon='🦠')
 
 def fetch_data():
     # USA shape file
@@ -24,12 +28,14 @@ def fetch_data():
     return usa_git,population, current
 
 
-def create_geodataframe(usa_git,population, current):
-    usa_mainland = usa_git.loc[:, ['STUSPS', 'NAME', 'geometry']]
-    # Merging population data and Covid-19 data
-    # cov_pop = population.merge(current.iloc[:, 1:3], left_on='STUSPS', right_on='state')
-    cov_pop = population.merge(current.loc[:, ['state','positive']], left_on='STUSPS', right_on='state')
+def merge_covid_and_population(current, population):
+    cov_pop = population.merge(current.loc[:, ['state', 'positive', 'death']], left_on='STUSPS', right_on='state')
     cov_pop.drop('state', axis=1, inplace=True)
+    return cov_pop
+
+
+def create_geodataframe(usa_git,cov_pop):
+    usa_mainland = usa_git.loc[:, ['STUSPS', 'NAME', 'geometry']]
     # Compute percentage of population already infected by Covid-19 by state
     cov_pop['positive_population_fraction'] = (cov_pop.positive / cov_pop.pop_2019) * 100
     # Adding percentage to shape file
@@ -45,6 +51,28 @@ def generate_and_save_map(usa_mainland_info):
     plt.savefig('current_map.png', bbox_inches='tight')
     pass
 
+
+def death_rate_plot(cov_pop):
+    cov_pop['death_per100k'] = (cov_pop.death * 100000) / cov_pop.pop_2019
+    fig, ax = plt.subplots(figsize=(6, 15))
+    temp = cov_pop.sort_values('death_per100k', ascending=False)
+    sns.set_color_codes('pastel')
+    sns.barplot(x='death_per100k', y='NAME', data=temp, color='orange')
+    ax.set(title='Deaths per 100,000 population', xlabel='', ylabel='',
+           xticklabels=[])
+    for p in ax.patches:
+        height = p.get_height()  # height of each horizontal bar is the same
+        width = p.get_width()  # width (average number of passengers)
+        # adding text to each bar
+        ax.text(x=width + 3,  # x-coordinate position of data label, padded 3 to right of bar
+                y=p.get_y() + (height / 2),
+                # y-coordinate position of data label, padded to be in the middle of the bar
+                s='{:.0f}'.format(width),  # data label, formatted to ignore decimals
+                va='center')  # sets vertical alignment (va) to center
+    sns.despine(bottom=True)  # removes box lines
+    ax.tick_params(bottom=False)
+    plt.savefig('death_rate_plot.png', bbox_inches='tight')
+    pass
 
 def some_stats(usa_mainland_info):
     state_max = usa_mainland_info.positive_population_fraction.max()
@@ -64,14 +92,31 @@ def frontend(current,max_pair, min_pair):
             .format(max_pair[0], max_pair[1], min_pair[0], min_pair[1]))
     last_date = str(current.date[0])
     last_date = last_date[4:6] + '/' + last_date[6:8] + '/' + last_date[0:4]
+    JHU = 'Johns Hopkins University CSSE'
+    census = 'U.S. Census Bureau'
     st.text('Data from: {}'.format(last_date))
     st.image('current_map.png')
+    st.text('Source: {} & {} (2019 population)'.format(JHU, census))
+    st.image('death_rate_plot.png')
+    pass
+
+def frontend2():
+    selection = st.radio("Select one:", (\
+        "Population percentage of infection",\
+        "Death per 100,000 population"))
+    if selection == 'Population percentage of infection':
+        st.text('Infection option')
+    else:
+        st.text('death')
     pass
 
 
 if __name__ == '__main__':
     usa_git,population, current = fetch_data()
-    usa_mainland_info = create_geodataframe(usa_git,population, current)
+    cov_pop = merge_covid_and_population(current, population)
+    usa_mainland_info = create_geodataframe(usa_git,cov_pop)
     max_pair, min_pair = some_stats(usa_mainland_info)
     generate_and_save_map(usa_mainland_info)
+    death_rate_plot(cov_pop)
     frontend(current, max_pair, min_pair)
+    # frontend2()
