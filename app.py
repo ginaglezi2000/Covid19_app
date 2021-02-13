@@ -14,7 +14,9 @@ import seaborn as sns
 # conda activate geo
 
 st.set_page_config(page_title='Gonzalez-Isunza.Covid19App',
-                   page_icon='🦠')
+                   page_icon='🦠',
+                   layout='wide',
+                   initial_sidebar_state='expanded')
 
 def fetch_data():
     # USA shape file
@@ -85,29 +87,39 @@ def some_stats(usa_mainland_info):
 
 
 def frontend(current,max_pair, min_pair):
+    def frontend_death100k():
+        st.header("Number of deaths for every 100,000 people")
+        st.image('death_rate_plot.png')
+        pass
+
+    def frontend_infection():
+        st.header("Percentage of population that has been infected")
+        st.text('Highest: {} with {:.1f}%      Lowest: {} with {:.1f}% '
+                .format(max_pair[0], max_pair[1], min_pair[0], min_pair[1]))
+        st.image('current_map.png')
+        pass
+
+    def menu():
+        selection = st.sidebar.radio("Select the desired information:", (
+            "Population percentage of infection",
+            "Death per 100,000 population"))
+        if selection == 'Death per 100,000 population':
+            frontend_death100k()
+        else:
+            frontend_infection()
+        pass
+
     st.title("Covid-19 tracker")
     st.subheader("By Georgina Gonzalez-Isunza")
-    st.header("Percentage of population that has been infected")
-    st.text('Highest: {} with {:.1f}%      Lowest: {} with {:.1f}% '\
-            .format(max_pair[0], max_pair[1], min_pair[0], min_pair[1]))
+    # st.sidebar.text('Select the desired information:')
     last_date = str(current.date[0])
     last_date = last_date[4:6] + '/' + last_date[6:8] + '/' + last_date[0:4]
+    st.text('Data from: {}'.format(last_date))
+    menu()
     JHU = 'Johns Hopkins University CSSE'
     census = 'U.S. Census Bureau'
-    st.text('Data from: {}'.format(last_date))
-    st.image('current_map.png')
     st.text('Source: {} & {} (2019 population)'.format(JHU, census))
-    st.image('death_rate_plot.png')
-    pass
-
-def frontend2():
-    selection = st.radio("Select one:", (\
-        "Population percentage of infection",\
-        "Death per 100,000 population"))
-    if selection == 'Population percentage of infection':
-        st.text('Infection option')
-    else:
-        st.text('death')
+    # st.image('death_rate_plot.png')
     pass
 
 
@@ -119,4 +131,3 @@ if __name__ == '__main__':
     generate_and_save_map(usa_mainland_info)
     death_rate_plot(cov_pop)
     frontend(current, max_pair, min_pair)
-    # frontend2()
